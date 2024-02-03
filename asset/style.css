@@ -572,6 +572,15 @@ body>div{
     animation: showUp .5s ease-in forwards;
 }
 
+#leak{
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    font-size: 1rem;
+    color: rgb(181, 181, 181);
+    font-weight: 300;
+}
+
 @keyframes showUp {
     0%{
         bottom: 2rem;

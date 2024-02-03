@@ -383,7 +383,7 @@ function initEventGameplay(asset) {
         localStorage.setItem("lotoHo",JSON.stringify(this.checked))
     }
     guidesHoLoto.onclick = ()=>{
-        asset.sfx.volchange.play()
+        // asset.sfx.volchange.play()
         guidesHoLoto.querySelector("p").innerText = getRandom(config.lyric)
     }
     lonBtn.onclick = ()=>{        
@@ -394,6 +394,7 @@ function initEventGameplay(asset) {
         }
 
         r = getRandom(config.numberNotCall)
+        document.getElementById("leak").innerText = r
         config.lyric = asset.lyric[r%10]
         guidesHoLoto.querySelector("p").innerText = getRandom(config.lyric)
 
