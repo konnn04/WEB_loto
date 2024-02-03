@@ -19,27 +19,49 @@ const config = {
     "page":0,
     "numberNotCall":new Set(),
     "numberCalled":new Set(),
-    "color":["#fc8f00","#59b002"]
+    "color":["#fc8f00","#59b002"],
+    "vol":{
+        music:0,
+        sfx:0
+    },
+    "ho":false,
+    "lyric":[]
+
 }
 
+
+
 window.onload = async(e)=>{
+    //Backup setting
+    
     const asset= {
         music:{
             main : new Music("./asset/music/kiepdoden.mp3"),
             loto1 : new Music("./asset/music/loto1.mp3"),
             loto2 : new Music("./asset/music/loto2.mp3"),
-            loto3 : new Music("./asset/music/loto3.mp3")
+            loto3 : new Music("./asset/music/loto3.mp3"),
+            loto4 : new Music("./asset/music/loto4.mp3"),
+            loto5 : new Music("./asset/music/loto5.mp3")
         },
         sfx:{
-            shake: new Sound("./asset/sfx_shake.mp3")
+            shake: new Sound("./asset/sfx_shake.mp3"),
+            volchange: new Sound("./asset/SE_VOLCHANGE_SE_UI.mp3"),
+            win: new Sound("./asset/SE_RESULT_SUPERSTAR.mp3")
         },
         img:{
             "phan":[
                 "./asset/img/phan/0.png",
                 "./asset/img/phan/1.png",
-                "./asset/img/phan/2.png"],
+                "./asset/img/phan/2.png",
+                "./asset/img/phan/4.png",
+                "./asset/img/phan/3.png"],
             "khoanh":[
-                "./asset/img/khoanh/0.png"],    
+                "./asset/img/khoanh/0.png",    
+                "./asset/img/khoanh/1.png",    
+                "./asset/img/khoanh/2.png",    
+                "./asset/img/khoanh/3.png",    
+                "./asset/img/khoanh/4.png",    
+                "./asset/img/khoanh/5.png"],    
             "hatde":[
                 "./asset/img/hatde/0.png",
                 "./asset/img/hatde/1.png",
@@ -51,9 +73,12 @@ window.onload = async(e)=>{
                 "./asset/img/huongduong/1.png",
                 "./asset/img/huongduong/2.png",
                 "./asset/img/huongduong/3.png"],
-        }
+           
+        },
+        lyric:await getJson("./asset/lyrics.json")
     }
-    const lyric = await getJson("./asset/lyrics.json")
+    asset.music.main.play(.2)
+
     const loto = await getJson("./asset/loto.json")
     const listLoto = document.querySelector(".list-box")
     const broadGame = document.querySelector("#gameplay .boardgame")
@@ -72,18 +97,64 @@ window.onload = async(e)=>{
     })
     
     //Gameplay   
-    ready()
-    initEventHome(config)
+    ready(asset)
+    initEventHome(config,asset)
     initEventList(config,asset,loto)
     initEventVolume(asset) 
     window.onresize()
     initEventMusic(asset,config)
+    try {
+        await backupSetting(asset) 
+    } catch (error) {
+        localStorage.clear("lotoStyle")
+        localStorage.clear("lotoVol")
+    }
 }   
+
+async function backupSetting(asset)  {
+    let nodeStyleSave =localStorage.getItem("lotoStyle")
+    let flag1 = true
+    if (nodeStyleSave) {
+        nodeStyleSave= await JSON.parse(nodeStyleSave)
+        for (const i of nodeStyleSave) {
+            if (!config.nodeStyle.has(i)) {
+                flag1=false
+                break
+            }
+        }
+        if (flag1) {
+            config.nodeStyle = new Set(nodeStyleSave)
+        }
+    }
+    let volSave =localStorage.getItem("lotoVol")
+    if (volSave) {
+        volSave = await JSON.parse(volSave)
+        if (volSave && "music" in volSave && "sfx" in volSave) {
+            config.vol = volSave
+            document.querySelector("#vol-music").value = volSave.music
+            document.querySelector("#vol-sfx").value = volSave.sfx
+            for (const i in asset.music) {
+                asset.music[i].setVolume(parseFloat(volSave.music))
+            }
+            for (const i in asset.sfx) {
+                asset.sfx[i].setVolume(parseFloat(volSave.sfx))            
+            }
+        }
+    }
+    let checkedHo = localStorage.getItem("lotoHo")
+    if (checkedHo && checkedHo=="true") {
+        config.ho = true
+        document.querySelector("#hoLoto").checked = config.ho 
+    }
+    
+}
 
 function initEventList(config,asset,loto){
     const lotos = document.querySelectorAll(".list-box .overlay .selection")
     Array.from(lotos).forEach((e,i)=>{
         e.onclick = ()=>{
+            
+            asset.sfx.volchange.play()
             config.page = i
             document.querySelector("#list").classList.add("hidden")
             document.querySelector("#gameplay").classList.remove("hidden")
@@ -98,17 +169,19 @@ function initEventList(config,asset,loto){
     })
 }
 
-function initEventHome(config) {
+function initEventHome(config,asset) {
     const boxButton = document.querySelector("#home .box-button")
     const btns = boxButton.querySelectorAll(".button")
 
     btns[0].onclick = ()=>{
+        asset.sfx.volchange.play()
         config.role = "host"
         document.querySelector("#home").classList.add("hidden")
         document.querySelector("#list").classList.remove("hidden")
     }
 
     btns[1].onclick = ()=>{
+        asset.sfx.volchange.play()
         config.role = "player"
         document.querySelector("#home").classList.add("hidden")
         document.querySelector("#list").classList.remove("hidden")
@@ -134,7 +207,13 @@ function initEventMusic(asset,config) {
         },{
             name:"Loto Cha Cha Cha",
             r:asset.music.loto3
-        }        
+        }    ,{
+            name:"Loto Mien tay",
+            r:asset.music.loto4
+        }   ,{
+            name:"Nhạc xổ số",
+            r:asset.music.loto5
+        }       
     ]
 
     let now = music[config.player.q]
@@ -192,6 +271,7 @@ function initEventMusic(asset,config) {
 }
 
 function initEventGameplay(asset) {
+    asset.music.main.pause()
     window.onresize()
     if(config.role!="host") {
         document.querySelector("#lon").style.display = "none"
@@ -205,7 +285,9 @@ function initEventGameplay(asset) {
     const listNode = document.querySelector("#gameplay .more .list-item")
     for (const i in asset.img) {
         let li= document.createElement("li")
-        li.className = "active"
+        if (config.nodeStyle.has(i)) {
+            li.className = "active"
+        }
         li.innerHTML = `
         <img src="${asset.img[i][0]}" alt="" srcset="">
         <div class="overlay">
@@ -215,6 +297,7 @@ function initEventGameplay(asset) {
         li.title = i.toString()
         listNode.appendChild(li)
         li.onclick = function(){
+            asset.sfx.volchange.play()
             if (config.nodeStyle.has(this.title)) {
                 if (config.nodeStyle.size <=1) return
                 config.nodeStyle.delete(this.title)
@@ -223,6 +306,7 @@ function initEventGameplay(asset) {
                 config.nodeStyle.add(this.title)
                 this.classList.add("active")
             }
+            localStorage.setItem("lotoStyle",JSON.stringify(Array.from(config.nodeStyle)))
         }
     }
 
@@ -233,10 +317,12 @@ function initEventGameplay(asset) {
         let t = e.querySelector(".tick")
         if (!t) return
         t.onclick = ()=>{
+            asset.sfx.volchange.play()
            e.classList.toggle("show")
            let type = getRandom(config.nodeStyle)
            t.querySelector("img").src = getRandom(asset.img[type])
            t.querySelector("img").style.rotate = Math.random()*360 + "deg"
+           
            if (config.lineNow[Math.floor(i/9)].has(t)) {
                 config.lineNow[Math.floor(i/9)].delete(t)
             }else{
@@ -253,11 +339,27 @@ function initEventGameplay(asset) {
             }else{
                 rows[Math.floor(i/9)].classList.remove(`win`)
             }
+
+
+            let win = false
+           config.lineNow.forEach((e,i)=>{
+                if (e.size==5) {
+                    win=true
+                }
+           })
+           if (win) {
+                document.querySelector("#win").classList.add("show")
+                asset.sfx.win.play()
+
+           }else{
+                document.querySelector("#win").classList.remove("show")
+           }
         }
     })
     const more = document.querySelector("#gameplay .more")
     const menuBtn = document.querySelector("#menu")
     menuBtn.onclick = ()=>{
+        asset.sfx.volchange.play()
         more.classList.toggle("show")
     }
 
@@ -270,10 +372,31 @@ function initEventGameplay(asset) {
     const animationLayer = document.querySelector("#animation")
     let r = 0
     document.querySelector("#gameplay .mobile .img").onclick = ()=>{
+        
         lonBtn.onclick()
     }
-    lonBtn.onclick = ()=>{
+    const switchHoLoto = document.querySelector("#hoLoto")
+    const guidesHoLoto = document.querySelector("#animation .lyric")
+    //Bật hò loto   
+    switchHoLoto.oninput = function() {
+        config.ho = this.checked
+        localStorage.setItem("lotoHo",JSON.stringify(this.checked))
+    }
+    guidesHoLoto.onclick = ()=>{
+        asset.sfx.volchange.play()
+        guidesHoLoto.querySelector("p").innerText = getRandom(config.lyric)
+    }
+    lonBtn.onclick = ()=>{        
+        if (!config.ho) {
+            document.querySelector(".box .lyric").style.display = "none"
+        }else{
+            document.querySelector(".box .lyric").style.display = "block"
+        }
+
         r = getRandom(config.numberNotCall)
+        config.lyric = asset.lyric[r%10]
+        guidesHoLoto.querySelector("p").innerText = getRandom(config.lyric)
+
         // console.log(r)
         config.numberNotCall.delete(r)
         config.numberCalled.add(r)
@@ -309,6 +432,8 @@ function initEventGameplay(asset) {
             return
         }
     }
+
+
 }
 
 function initEventVolume(asset) {
@@ -319,15 +444,18 @@ function initEventVolume(asset) {
         for (const i in asset.music) {
             asset.music[i].setVolume(parseFloat(volMusic.value))
         }
-        
+        config.vol.music = parseFloat(volMusic.value)
+        localStorage.setItem("lotoVol",JSON.stringify(config.vol))
+        asset.sfx.volchange.play()
     }
 
     volSfx.oninput = ()=>{
         for (const i in asset.sfx) {
-            asset.sfx[i].setVolume(parseFloat(volSfx.value))
-
+            asset.sfx[i].setVolume(parseFloat(volSfx.value))            
         }
-        
+        config.vol.sfx = parseFloat(volSfx.value)
+        localStorage.setItem("lotoVol",JSON.stringify(config.vol))
+        asset.sfx.volchange.play()
     }
 }
 
@@ -346,14 +474,16 @@ window.onresize = ()=>{
     more.classList.remove("show")
 }
 
-async function ready() {
+async function ready(asset) {
     const setting = document.querySelector("#setting")
     const settingSwitch = setting.querySelector("i")
     const settingClose = setting.querySelector(".close")
     settingSwitch.onclick = ()=>{
+        asset.sfx.volchange.play()
         setting.querySelector(".box").classList.toggle("hidden")
     }
     settingClose.onclick = ()=>{
+        asset.sfx.volchange.play()
         setting.querySelector(".box").classList.toggle("hidden")
     }
 }
@@ -380,6 +510,7 @@ class Sound  extends Audio{
     }
 
     play(x = -1) {
+        this.currentTime=0
         if (x>=0 && x<=1) {            
             this.volume = x
         }
@@ -414,18 +545,12 @@ function createTableLoto(obj,x="") {
 
     return `
     <div class="loto-paper">
-        <style>
-        .loto-paper table td:empty {
-            background-color: ${obj[0]};
-        }
-        </style>
-
         <p>
             <span>❖❖❖❖❖❖❖❖❖❖❖❖</span>
             <span>MPC CLUB</span>
             <span>❖❖❖❖❖❖❖❖❖❖❖❖</span>
         </p>
-        <table>
+        <table style="background-color: ${obj[0]};">
             ${h[0]}
         </table>
         <p>
@@ -433,7 +558,7 @@ function createTableLoto(obj,x="") {
             <span>#TetCungOUMPC</span>
             <span>❖❖❖❖❖❖❖❖❖❖</span>
         </p>
-        <table>
+        <table style="background-color: ${obj[0]};">
             ${h[1]}
         </table>
         <p>
@@ -441,7 +566,7 @@ function createTableLoto(obj,x="") {
             <span>Mã đáo thành công</span>
             <span>❖❖❖❖❖❖❖❖❖❖</span>
         </p>
-        <table>
+        <table style="background-color: ${obj[0]};">
             ${h[2]}
         </table>
         <p>
